@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: healthcare-analysis-app
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - FLASK_APP=app.py
+      - HIVE_HOST=hive-server
+      - HIVE_PORT=10000
+      - HIVE_DATABASE=healthcare
+    volumes:
+      - .:/app
+      - /app/__pycache__
+    depends_on:
+      - hive-server
+    networks:
+      - healthcare-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  hive-server:
+    image: hive:latest
+    container_name: healthcare-hive-server
+    ports:
+      - "10000:10000"
+      - "9083:9083"
+    environment:
+      - SERVICE_NAME=hiveserver2
+    volumes:
+      - hive-data:/var/lib/hive
+    networks:
+      - healthcare-network
+    restart: unless-stopped
+
+volumes:
+  hive-data:
+
+networks:
+  healthcare-network:
+    driver: bridge
